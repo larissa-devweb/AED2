@@ -1,10 +1,3 @@
-//LARISSA GABRIELA - M2
-
-//OBS: EU COMENTO BASTANTE, ATE POR QUE ME PERCO FACIL 
-
-//como estou fazendo em casa, comecei 14h18 e acabei 16h10 (sim, apanhei bastante em algumas coisas)
-// por falta de tempo, ate por que demorei mais que 1 aula e nao quis ir mais a fundo, pois seria ainda mais injusto com os colegas que estavam na sala
-// nao le emoji, tem certos problemas ocm espaço entre palavras
 
 //Executar: ./trie lexico.txt
 //pelo que estudei, diferente da AVL/RB, a trie é mais rapida para buscas de strings por 
@@ -242,4 +235,5 @@ int main(){
 
 }
     }
+
 }
