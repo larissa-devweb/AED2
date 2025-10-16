@@ -1,0 +1,113 @@
+💻 Exercício Prático — Implementação de uma Tabela Hash com Dupla Função de Dispersão
+
+Disciplina: Algoritmos e Estruturas de Dados II
+Tema: Tabelas de Dispersão (Hash Tables)
+Linguagem: C
+🎯 Objetivo
+
+Implementar uma tabela de dispersão (hash table) em linguagem C, utilizando:
+
+    Hashing duplo para tratamento de colisões;
+
+    Re-hash dinâmico quando a tabela estiver cheia;
+
+    Funções para inserção, busca e remoção de elementos;
+
+    Dados reais provenientes do léxico OpLexicon, armazenando informações completas para cada palavra.
+
+🧩 Descrição Geral
+
+O exercício consiste em construir uma tabela hash para armazenar os registros do léxico OpLexicon, em que cada palavra será usada como chave e todas as outras informações associadas (como polaridade e categoria gramatical) serão os dados armazenados.
+
+A implementação deve considerar colisões, ocupação de posições, remoções e realocação quando a capacidade for excedida.
+⚙️ Requisitos de Implementação
+
+    Estrutura principal
+
+        A tabela deve ser implementada sobre um arranjo (vetor).
+
+        Cada posição do arranjo deve conter:
+
+            a chave (palavra),
+
+            os dados associados (todas as outras colunas do léxico),
+
+            e marcadores que indiquem se a posição está:
+
+                nunca ocupada,
+
+                atualmente ocupada, ou
+
+                removida.
+
+    Função Hash Primária – Polynomial Rolling Hash
+
+A primeira função hash, ( h_1(k) ), deve ser baseada na polynomial rolling hash, amplamente utilizada para chaves do tipo string.
+
+Seja a palavra ( k = c_0c_1c_2...c_{n-1} ), em que cada ( c_i ) é o valor numérico (por exemplo, código ASCII) do caractere.
+A função é dada por:
+
+onde:
+
+    ( p ) é uma constante base (tipicamente 31 ou 53),
+
+    ( m ) é o tamanho atual da tabela hash (número de posições do arranjo).
+
+    Função Hash Secundária – Somatório dos códigos dos caracteres
+
+A segunda função hash, ( h_2(k) ), deve ser uma função simples obtida pela soma dos códigos numéricos dos caracteres da chave:
+
+Essa função é usada para determinar o deslocamento em caso de colisão.
+
+    Tratamento de colisões – Double Hashing
+
+Em caso de colisão, deve-se aplicar a técnica de hashing duplo, recalculando o índice da seguinte forma:
+
+onde:
+
+    ( t ) é o número de tentativas de inserção (0, 1, 2, ...).
+
+O processo continua até encontrar uma posição livre ou até constatar que a tabela está cheia.
+
+    Operações obrigatórias
+    O programa deve permitir:
+
+    Inserir uma nova palavra e seus dados;
+
+    Buscar uma palavra e exibir seus dados;
+
+    Remover uma palavra, marcando a posição como removida (sem apagar fisicamente o registro, para não quebrar o encadeamento de sondagens).
+
+    Redimensionamento (Re-hash dinâmico)
+
+Quando o número de elementos ocupados atingir a capacidade máxima do arranjo, o sistema deve:
+
+    Criar um novo arranjo com o dobro do tamanho atual;
+
+    Reinserir todas as entradas válidas (não removidas) na nova tabela, aplicando novamente ( h_1 ) e ( h_2 ) considerando o novo valor de ( m ).
+
+    Leitura dos dados
+
+Os dados devem ser lidos a partir do arquivo do léxico OpLexicon, disponível publicamente.
+A chave será a palavra, e o valor associado será a concatenação das demais colunas (polaridade, tipo de palavra, domínio, etc.).
+🧠 Aspectos a serem avaliados
+
+    Correção da implementação das funções h1(k)  e  h_2(k);
+
+    Funcionamento adequado do tratamento de colisões via double hashing;
+
+    Corretude das operações de inserção, busca e remoção;
+
+    Implementação correta do redimensionamento e reinserção;
+
+    Clareza e modularização do código.
+
+💡 Sugestões
+
+    Escolha valores adequados de ( p ) e ( m ) para evitar agrupamentos (clustering);
+
+    Monitore a taxa de ocupação da tabela (load factor);
+
+    Garanta que o programa não entre em laços infinitos em caso de colisões sucessivas;
+
+    Mantenha um controle de memória apropriado.
