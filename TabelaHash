@@ -1,113 +1,260 @@
-💻 Exercício Prático — Implementação de uma Tabela Hash com Dupla Função de Dispersão
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
-Disciplina: Algoritmos e Estruturas de Dados II
-Tema: Tabelas de Dispersão (Hash Tables)
-Linguagem: C
-🎯 Objetivo
+// tamanho inicial da hash que cresce automaticamente depois
+#define TAMANHO_TABELA_INICIO 101
+#define BASE_POLINOMIAL 31
 
-Implementar uma tabela de dispersão (hash table) em linguagem C, utilizando:
+// cada posição da hash pode ter 3 estados
+typedef enum {
+    POSICAO_NUNCA_OCUPADA,
+    POSICAO_ATUAL_OCUPADA,
+    POSICAO_REMOVIDA
+} EstadoPosicao;
 
-    Hashing duplo para tratamento de colisões;
+// guardar informações de uma palavra
+typedef struct {
+    char *palavra;         // chave
+    char *dadosLigados;    // informações associadas
+    EstadoPosicao estado;  // estado da posição
+} RegistroPalavra;
 
-    Re-hash dinâmico quando a tabela estiver cheia;
+// estrutura da tabela hash
+typedef struct {
+    RegistroPalavra *vetorRegistros;
+    int tamanhoTabela;
+    int quantidadeOcupada;
+} TabelaHash;
 
-    Funções para inserção, busca e remoção de elementos;
+// função hash primária — polynomial rolling hash
+unsigned int funcaoHashPrimaria(const char *chave, int tamanhoTabela) {
+    unsigned long long valorHash = 0;
+    unsigned long long potencia = 1;
 
-    Dados reais provenientes do léxico OpLexicon, armazenando informações completas para cada palavra.
+    for (int i = 0; chave[i] != '\0'; i++) {
+        valorHash = (valorHash + (chave[i] * potencia)) % tamanhoTabela;
+        potencia = (potencia * BASE_POLINOMIAL) % tamanhoTabela;
+    }
+    return (unsigned int)valorHash;
+}
 
-🧩 Descrição Geral
+// função hash secundária — somatório dos códigos ASCII
+unsigned int funcaoHashSecundaria(const char *chave, int tamanhoTabela) {
+    unsigned int soma = 0;
+    for (int i = 0; chave[i] != '\0'; i++) {
+        soma += chave[i];
+    }
+    soma = soma % (tamanhoTabela - 1);
+    if (soma == 0)
+        return 1;
+    else
+        return soma;
+}
 
-O exercício consiste em construir uma tabela hash para armazenar os registros do léxico OpLexicon, em que cada palavra será usada como chave e todas as outras informações associadas (como polaridade e categoria gramatical) serão os dados armazenados.
+// criar tabela hash
+TabelaHash *criarTabelaHash(int tamanho) {
+    TabelaHash *novaTabela = (TabelaHash *)malloc(sizeof(TabelaHash));
+    novaTabela->tamanhoTabela = tamanho;
+    novaTabela->quantidadeOcupada = 0;
+    novaTabela->vetorRegistros = (RegistroPalavra *)malloc(tamanho * sizeof(RegistroPalavra));
 
-A implementação deve considerar colisões, ocupação de posições, remoções e realocação quando a capacidade for excedida.
-⚙️ Requisitos de Implementação
+    for (int i = 0; i < tamanho; i++) {
+        novaTabela->vetorRegistros[i].estado = POSICAO_NUNCA_OCUPADA;
+        novaTabela->vetorRegistros[i].palavra = NULL;
+        novaTabela->vetorRegistros[i].dadosLigados = NULL;
+    }
+    return novaTabela;
+}
 
-    Estrutura principal
+// liberar memória da tabela
+void liberarTabela(TabelaHash *tabela) {
+    for (int i = 0; i < tabela->tamanhoTabela; i++) {
+        if (tabela->vetorRegistros[i].estado == POSICAO_ATUAL_OCUPADA) {
+            free(tabela->vetorRegistros[i].palavra);
+            free(tabela->vetorRegistros[i].dadosLigados);
+        }
+    }
+    free(tabela->vetorRegistros);
+    free(tabela);
+}
 
-        A tabela deve ser implementada sobre um arranjo (vetor).
+// calcular fator de carga (ocupação)
+float calcularFatorCarga(TabelaHash *tabela) {
+    return (float)tabela->quantidadeOcupada / tabela->tamanhoTabela;
+}
 
-        Cada posição do arranjo deve conter:
+// redimensionar tabela
+TabelaHash *redimensionarTabela(TabelaHash *tabela) {
+    int novoTamanho = tabela->tamanhoTabela * 2 + 1;
+    TabelaHash *novaTabela = criarTabelaHash(novoTamanho);
 
-            a chave (palavra),
+    for (int i = 0; i < tabela->tamanhoTabela; i++) {
+        if (tabela->vetorRegistros[i].estado == POSICAO_ATUAL_OCUPADA) {
+            char *palavra = tabela->vetorRegistros[i].palavra;
+            char *dados = tabela->vetorRegistros[i].dadosLigados;
 
-            os dados associados (todas as outras colunas do léxico),
+            unsigned int indice1 = funcaoHashPrimaria(palavra, novaTabela->tamanhoTabela);
+            unsigned int indice2 = funcaoHashSecundaria(palavra, novaTabela->tamanhoTabela);
 
-            e marcadores que indiquem se a posição está:
+            int tentativa = 0;
+            int posicao;
 
-                nunca ocupada,
+            while (tentativa < novaTabela->tamanhoTabela) {
+                posicao = (indice1 + tentativa * indice2) % novaTabela->tamanhoTabela;
 
-                atualmente ocupada, ou
+                if (novaTabela->vetorRegistros[posicao].estado == POSICAO_NUNCA_OCUPADA ||
+                    novaTabela->vetorRegistros[posicao].estado == POSICAO_REMOVIDA) {
+                    break;
+                }
+                tentativa++;
+            }
 
-                removida.
+            novaTabela->vetorRegistros[posicao].palavra = strdup(palavra);
+            novaTabela->vetorRegistros[posicao].dadosLigados = strdup(dados);
+            novaTabela->vetorRegistros[posicao].estado = POSICAO_ATUAL_OCUPADA;
+            novaTabela->quantidadeOcupada++;
+        }
+    }
 
-    Função Hash Primária – Polynomial Rolling Hash
+    liberarTabela(tabela);
+    return novaTabela;
+}
 
-A primeira função hash, ( h_1(k) ), deve ser baseada na polynomial rolling hash, amplamente utilizada para chaves do tipo string.
+// inserir palavra
+void inserirPalavraNaTabela(TabelaHash **ponteiroTabela, const char *palavra, const char *dadosLigados) {
+    TabelaHash *tabela = *ponteiroTabela;
 
-Seja a palavra ( k = c_0c_1c_2...c_{n-1} ), em que cada ( c_i ) é o valor numérico (por exemplo, código ASCII) do caractere.
-A função é dada por:
+    if (calcularFatorCarga(tabela) >= 0.7) {
+        *ponteiroTabela = redimensionarTabela(tabela);
+        tabela = *ponteiroTabela;
+    }
 
-onde:
+    unsigned int indice1 = funcaoHashPrimaria(palavra, tabela->tamanhoTabela);
+    unsigned int indice2 = funcaoHashSecundaria(palavra, tabela->tamanhoTabela);
 
-    ( p ) é uma constante base (tipicamente 31 ou 53),
+    int tentativa = 0;
+    int posicao;
 
-    ( m ) é o tamanho atual da tabela hash (número de posições do arranjo).
+    while (tentativa < tabela->tamanhoTabela) {
+        posicao = (indice1 + tentativa * indice2) % tabela->tamanhoTabela;
 
-    Função Hash Secundária – Somatório dos códigos dos caracteres
+        if (tabela->vetorRegistros[posicao].estado != POSICAO_ATUAL_OCUPADA) {
+            tabela->vetorRegistros[posicao].palavra = strdup(palavra);
+            tabela->vetorRegistros[posicao].dadosLigados = strdup(dadosLigados);
+            tabela->vetorRegistros[posicao].estado = POSICAO_ATUAL_OCUPADA;
+            tabela->quantidadeOcupada++;
+            return;
+        }
 
-A segunda função hash, ( h_2(k) ), deve ser uma função simples obtida pela soma dos códigos numéricos dos caracteres da chave:
+        tentativa++;
+    }
 
-Essa função é usada para determinar o deslocamento em caso de colisão.
+    printf("Tabela cheia. Não foi possível inserir a palavra: %s\n", palavra);
+}
 
-    Tratamento de colisões – Double Hashing
+// buscar palavra
+char *buscarPalavraNaTabela(TabelaHash *tabela, const char *palavra) {
+    unsigned int indice1 = funcaoHashPrimaria(palavra, tabela->tamanhoTabela);
+    unsigned int indice2 = funcaoHashSecundaria(palavra, tabela->tamanhoTabela);
+    int tentativa = 0;
+    int posicao;
 
-Em caso de colisão, deve-se aplicar a técnica de hashing duplo, recalculando o índice da seguinte forma:
+    while (tentativa < tabela->tamanhoTabela) {
+        posicao = (indice1 + tentativa * indice2) % tabela->tamanhoTabela;
 
-onde:
+        if (tabela->vetorRegistros[posicao].estado == POSICAO_NUNCA_OCUPADA) {
+            return NULL;
+        }
 
-    ( t ) é o número de tentativas de inserção (0, 1, 2, ...).
+        if (tabela->vetorRegistros[posicao].estado == POSICAO_ATUAL_OCUPADA &&
+            strcmp(tabela->vetorRegistros[posicao].palavra, palavra) == 0) {
+            return tabela->vetorRegistros[posicao].dadosLigados;
+        }
 
-O processo continua até encontrar uma posição livre ou até constatar que a tabela está cheia.
+        tentativa++;
+    }
 
-    Operações obrigatórias
-    O programa deve permitir:
+    return NULL;
+}
 
-    Inserir uma nova palavra e seus dados;
+// remover palavra
+void removerPalavraDaTabela(TabelaHash *tabela, const char *palavra) {
+    unsigned int indice1 = funcaoHashPrimaria(palavra, tabela->tamanhoTabela);
+    unsigned int indice2 = funcaoHashSecundaria(palavra, tabela->tamanhoTabela);
+    int tentativa = 0;
+    int posicao;
 
-    Buscar uma palavra e exibir seus dados;
+    while (tentativa < tabela->tamanhoTabela) {
+        posicao = (indice1 + tentativa * indice2) % tabela->tamanhoTabela;
 
-    Remover uma palavra, marcando a posição como removida (sem apagar fisicamente o registro, para não quebrar o encadeamento de sondagens).
+        if (tabela->vetorRegistros[posicao].estado == POSICAO_NUNCA_OCUPADA) {
+            printf("Palavra não encontrada.\n");
+            return;
+        }
 
-    Redimensionamento (Re-hash dinâmico)
+        if (tabela->vetorRegistros[posicao].estado == POSICAO_ATUAL_OCUPADA &&
+            strcmp(tabela->vetorRegistros[posicao].palavra, palavra) == 0) {
+            free(tabela->vetorRegistros[posicao].palavra);
+            free(tabela->vetorRegistros[posicao].dadosLigados);
+            tabela->vetorRegistros[posicao].estado = POSICAO_REMOVIDA;
+            tabela->quantidadeOcupada--;
+            printf("Palavra removida com sucesso.\n");
+            return;
+        }
 
-Quando o número de elementos ocupados atingir a capacidade máxima do arranjo, o sistema deve:
+        tentativa++;
+    }
 
-    Criar um novo arranjo com o dobro do tamanho atual;
+    printf("Palavra não encontrada.\n");
+}
 
-    Reinserir todas as entradas válidas (não removidas) na nova tabela, aplicando novamente ( h_1 ) e ( h_2 ) considerando o novo valor de ( m ).
+// ler arquivo e carregar para a tabela
+void carregarArquivoOpLexicon(TabelaHash **ponteiroTabela, const char *nomeArquivo) {
+    FILE *arquivo = fopen(nomeArquivo, "r");
+    if (!arquivo) {
+        printf("Erro ao abrir %s\n", nomeArquivo);
+        return;
+    }
 
-    Leitura dos dados
+    char linha[1024];
+    while (fgets(linha, sizeof(linha), arquivo)) {
+        char *palavra = strtok(linha, "\t\n");
+        char *resto = strtok(NULL, "\n");
+        if (palavra && resto) {
+            inserirPalavraNaTabela(ponteiroTabela, palavra, resto);
+        }
+    }
 
-Os dados devem ser lidos a partir do arquivo do léxico OpLexicon, disponível publicamente.
-A chave será a palavra, e o valor associado será a concatenação das demais colunas (polaridade, tipo de palavra, domínio, etc.).
-🧠 Aspectos a serem avaliados
+    fclose(arquivo);
+}
 
-    Correção da implementação das funções h1(k)  e  h_2(k);
+// main
+int main() {
+    TabelaHash *tabelaOpLexicon = criarTabelaHash(TAMANHO_TABELA_INICIO);
 
-    Funcionamento adequado do tratamento de colisões via double hashing;
+    printf("Carregando dados de oplexicon.txt...\n");
+    carregarArquivoOpLexicon(&tabelaOpLexicon, "oplexicon.txt");
 
-    Corretude das operações de inserção, busca e remoção;
+    printf("Digite uma palavra para buscar (ou 'sair' para encerrar)\n");
+    char entrada[100];
 
-    Implementação correta do redimensionamento e reinserção;
+    while (1) {
+        printf("Palavra: ");
+        scanf("%s", entrada);
 
-    Clareza e modularização do código.
+        if (strcmp(entrada, "sair") == 0)
+            break;
 
-💡 Sugestões
+        char *resultado = buscarPalavraNaTabela(tabelaOpLexicon, entrada);
+        if (resultado) {
+            printf("Encontrou: %s\n", resultado);
+        } else {
+            printf("Não encontrada.\n");
+        }
+    }
 
-    Escolha valores adequados de ( p ) e ( m ) para evitar agrupamentos (clustering);
-
-    Monitore a taxa de ocupação da tabela (load factor);
-
-    Garanta que o programa não entre em laços infinitos em caso de colisões sucessivas;
-
-    Mantenha um controle de memória apropriado.
+    liberarTabela(tabelaOpLexicon);
+    return 0;
+}
