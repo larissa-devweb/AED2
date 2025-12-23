@@ -1,5 +1,3 @@
-//LARISSA GABRIELA - M2
-
 /*PRECISO DE:
 ler arquivos em byte ou caracter por caracter
 contar frequências
@@ -25,3 +23,4 @@ int main() {
     descompactar("compactado.huff", "saida.txt");
     return 0;
 }
+
