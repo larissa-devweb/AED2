@@ -1,6 +1,3 @@
-//LARISSA GABRIELA - M2
-//escolhi dj38.tsp para testar
-// não tive tempo de estressar o algoritmo com a china e japão, mas no relatorio fiz analise teorica de consumo de memoria
 
 #include <stdio.h>
 #include <string.h>
@@ -363,4 +360,5 @@ int main(){
     free(gl);
 
     return 0;
+
 }
