@@ -1,6 +1,3 @@
-//LARISSA GABRIELA - M2
-
-
 #include  <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,3 +190,4 @@ int main() {
     return 0;
 }
 }
+
